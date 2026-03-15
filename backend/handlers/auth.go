@@ -80,7 +80,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
     wsID := uuid.New().String()
     h.DB.Exec(
         `INSERT INTO workspaces (id, name, owner_id) VALUES ($1, $2, $3)`,
-        wsID, user.Name+"\'s Workspace", user.ID,
+        wsID, user.Name+"'s Workspace", user.ID,
     )
     h.DB.Exec(
         `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, $3)`,
