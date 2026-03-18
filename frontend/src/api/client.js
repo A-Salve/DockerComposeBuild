@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
 
 const client = axios.create({ baseURL: API_URL });
 
@@ -56,7 +56,7 @@ export const notifications = {
 };
 
 export const analytics = {
-  workspaceStats: (wsId) => axios.get(`${process.env.REACT_APP_ANALYTICS_URL || 'http://localhost:8082'}/stats/workspace/${wsId}`),
+  workspaceStats: (wsId) => axios.get(`${process.env.REACT_APP_ANALYTICS_URL || '/analytics'}/stats/workspace/${wsId}`),
 };
 
 export default client;
