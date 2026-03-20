@@ -110,7 +110,7 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Block */}
       <main style={styles.main}>
         {/* Top bar */}
         <header style={styles.topbar}>
