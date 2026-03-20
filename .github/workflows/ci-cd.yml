@@ -13,16 +13,16 @@ jobs:
         run: whoami && pwd
 
       - name: Update code
-        run: git -C /root/projects/DockerComposeBuild pull
+        run: git -C /home/gitrunner/DockerComposeBuild pull
 
       - name: Build images
         run: |
-          cd /root/projects/DockerComposeBuild
+          cd /home/gitrunner/DockerComposeBuild
           docker compose build
 
       - name: Test containers
         run: |
-          cd /root/projects/DockerComposeBuild
+          cd /home/gitrunner/DockerComposeBuild
           docker compose up -d
           sleep 20
           curl --fail http://localhost || (docker-compose logs && exit 1)
@@ -30,6 +30,6 @@ jobs:
 
       - name: Deploy
         run: |
-          cd /root/projects/DockerComposeBuild
+          cd /home/gitrunner/DockerComposeBuild
           docker compose pull
           docker compose up -d --remove-orphans
