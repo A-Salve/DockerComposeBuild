@@ -36,8 +36,7 @@ services:
        
   frontend:
     build: ./frontend
-      # ports:
-      #     - "80:80"
+
     depends_on:
       - backend
       - analytics
@@ -64,8 +63,7 @@ services:
       - redis
     environment:
       REDIS_URL: redis:6379
-      # REDIS_HOST: redis
-        #  REDIS_PORT: 6379
+    
 
   redis:
     image: redis:7-alpine
