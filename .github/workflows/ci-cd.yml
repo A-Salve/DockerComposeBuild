@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: self-hosted
+
     steps:
       - name: Check runner
         run: whoami && pwd
@@ -20,16 +21,17 @@ jobs:
           cd /home/gitrunner/DockerComposeBuild
           docker compose build
 
-      - name: Test containers
+      - name: Deploy (zero-downtime-ish)
         run: |
           cd /home/gitrunner/DockerComposeBuild
-          docker compose up -d
-          sleep 20
-          curl --fail http://localhost || (docker-compose logs && exit 1)
-          docker compose down
+          docker compose up -d --build --remove-orphans
 
-      - name: Deploy
+      - name: Wait for app
         run: |
-          cd /home/gitrunner/DockerComposeBuild
-          docker compose pull
-          docker compose up -d --remove-orphans
+          until curl -s http://localhost > /dev/null; do
+            echo "Waiting..."
+            sleep 2
+          done
+
+      - name: Health check
+        run: curl --fail http://localhost
