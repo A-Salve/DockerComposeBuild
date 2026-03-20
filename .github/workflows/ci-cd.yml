@@ -5,31 +5,31 @@ on:
     branches:
       - main
 
-  jobs:
-     build-and-deploy:
-       runs-on: self-hosted
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Check runner
+        run: whoami && pwd
 
-  steps:
-    - name: Check runner
-      run: whoami && pwd
-    - name: Update code
-      run: git -C /root/projects/DockerComposeBuild pull
+      - name: Update code
+        run: git -C /root/projects/DockerComposeBuild pull
 
-    - name: build images
-      run: |
-        cd /root/projects/DockerComposeBuild
-        docker compose build
+      - name: Build images
+        run: |
+          cd /root/projects/DockerComposeBuild
+          docker compose build
 
-    - name: test containers
-      run: |
-        cd /root/projects/DockerComposeBuild
-        docker compose up -d
-        sleep 20
-        curl --fail http://localhost || (docker-compose logs && exit 1)
-        docker compose down
+      - name: Test containers
+        run: |
+          cd /root/projects/DockerComposeBuild
+          docker compose up -d
+          sleep 20
+          curl --fail http://localhost || (docker-compose logs && exit 1)
+          docker compose down
 
-    - name: Deploy
-      run: |
-        cd /root/projects/DockerComposeBuild
-        docker compose pull
-        docker compose up -d --remove-orphans
+      - name: Deploy
+        run: |
+          cd /root/projects/DockerComposeBuild
+          docker compose pull
+          docker compose up -d --remove-orphans
