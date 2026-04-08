@@ -103,7 +103,7 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok", "service": "taskflow-api"})
 	})
 
-	r.GET("/metric", func(c *gin.Context) {
+	r.GET("/metrics", func(c *gin.Context) {
 		dbStats := db.Stats()
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
