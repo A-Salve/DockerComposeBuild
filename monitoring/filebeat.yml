@@ -1,0 +1,12 @@
+filebeat.inputs:
+- type: docker
+  containers.ids:
+    - "*"
+  processors:
+    - add_docker_metadata: ~
+    - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  username: "elastic"          
+  password: "pwd123"         
