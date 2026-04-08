@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -27,62 +28,7 @@ func connectDB() *sqlx.DB {
 		db, err = sqlx.Connect("postgres", dbURL)
 		if err == nil {
 			log.Println("Connected to PostgreSQL")
-			return db
-		}
-		log.Printf("DB not ready, retrying %d/15...", i+1)
-		time.Sleep(2 * time.Second)
-	}
-	log.Fatalf("Cannot connect to DB: %v", err)
-	return nil
-}
-
-func main() {
-	db := connectDB()
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(10)
-
-	r := gin.Default()
-
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-
-	authH := handlers.NewAuthHandler(db)
-	boardH := handlers.NewBoardHandler(db)
-	taskH := handlers.NewTaskHandler(db)
-	wsH := handlers.NewWorkspaceHandler(db)
-	notifH := handlers.NewNotificationHandler(db)
-
-	// Public routes
-	api := r.Group("/api/v1")
-	{
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", authH.Register)
-			auth.POST("/login", authH.Login)
-		}
-	}
-
-	// Protected routes
-	protected := api.Group("/")
-	protected.Use(middleware.AuthRequired())
-	{
-		protected.GET("/auth/me", authH.Me)
-
-		// Workspaces
-		protected.GET("/workspaces", wsH.GetWorkspaces)
-		protected.POST("/workspaces", wsH.CreateWorkspace)
-		protected.GET("/workspaces/:workspaceId", wsH.GetWorkspace)
-		protected.GET("/workspaces/:workspaceId/members", wsH.GetMembers)
-
-		// Boards
-		protected.GET("/workspaces/:workspaceId/boards", boardH.GetBoards)
-		protected.POST("/workspaces/:workspaceId/boards", boardH.CreateBoard)
+@@ -86,65 +87,97 @@ func main() {
 		protected.GET("/boards/:boardId", boardH.GetBoard)
 		protected.DELETE("/boards/:boardId", boardH.DeleteBoard)
 
@@ -104,6 +50,32 @@ func main() {
 	})
 
 	r.GET("/metrics", func(c *gin.Context) {
+		dbStats := db.Stats()
+		var memStats runtime.MemStats
+		runtime.ReadMemStats(&memStats)
+
+		c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+
+		writeMetric(c, "taskflow_runtime_cpu_count", "gauge", "Number of logical CPUs available.", runtime.NumCPU())
+		writeMetric(c, "taskflow_runtime_goroutines", "gauge", "Current number of goroutines.", runtime.NumGoroutine())
+		writeMetric(c, "taskflow_runtime_memory_alloc_bytes", "gauge", "Number of allocated bytes.", memStats.Alloc)
+		writeMetric(c, "taskflow_runtime_memory_sys_bytes", "gauge", "Number of bytes obtained from the OS.", memStats.Sys)
+		writeMetric(c, "taskflow_runtime_memory_heap_inuse_bytes", "gauge", "Number of heap bytes in use.", memStats.HeapInuse)
+		writeMetric(c, "taskflow_runtime_memory_heap_idle_bytes", "gauge", "Number of idle heap bytes.", memStats.HeapIdle)
+		writeMetric(c, "taskflow_runtime_memory_gc_total", "counter", "Total number of completed GC cycles.", memStats.NumGC)
+
+		writeMetric(c, "taskflow_db_max_open_connections", "gauge", "Configured max open DB connections.", dbStats.MaxOpenConnections)
+		writeMetric(c, "taskflow_db_open_connections", "gauge", "Current number of open DB connections.", dbStats.OpenConnections)
+		writeMetric(c, "taskflow_db_in_use_connections", "gauge", "Current number of in-use DB connections.", dbStats.InUse)
+		writeMetric(c, "taskflow_db_idle_connections", "gauge", "Current number of idle DB connections.", dbStats.Idle)
+		writeMetric(c, "taskflow_db_wait_count_total", "counter", "Total number of waits for a new connection.", dbStats.WaitCount)
+		writeMetric(c, "taskflow_db_wait_duration_seconds_total", "counter", "Total time blocked waiting for a new connection.", dbStats.WaitDuration.Seconds())
+		writeMetric(c, "taskflow_db_max_idle_closed_total", "counter", "Total connections closed due to idle limit.", dbStats.MaxIdleClosed)
+		writeMetric(c, "taskflow_db_max_idle_time_closed_total", "counter", "Total connections closed due to idle time.", dbStats.MaxIdleTimeClosed)
+		writeMetric(c, "taskflow_db_max_lifetime_closed_total", "counter", "Total connections closed due to max lifetime.", dbStats.MaxLifetimeClosed)
+	})
+
+	r.GET("/metrics/json", func(c *gin.Context) {
 		dbStats := db.Stats()
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
@@ -133,6 +105,12 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
+}
+
+func writeMetric(c *gin.Context, name, metricType, help string, value any) {
+	fmt.Fprintf(c.Writer, "# HELP %s %s\n", name, help)
+	fmt.Fprintf(c.Writer, "# TYPE %s %s\n", name, metricType)
+	fmt.Fprintf(c.Writer, "%s %v\n", name, value)
 }
 
 func formatDBStats(stats sql.DBStats) gin.H {
