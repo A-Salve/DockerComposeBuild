@@ -30,7 +30,7 @@ jobs:
         run: |
           until curl -s http://localhost > /dev/null; do
             echo "Waiting..."
-            sleep 2
+            sleep 20
           done
 
       - name: Health check
